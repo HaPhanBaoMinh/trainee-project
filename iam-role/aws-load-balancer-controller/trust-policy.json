@@ -1,0 +1,17 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::026090549419:oidc-provider/oidc.eks.ap-southeast-1.amazonaws.com/id/9AF37B05E19EE4037D34F2D79B4F2017"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "oidc.eks.ap-southeast-1.amazonaws.com/id/9AF37B05E19EE4037D34F2D79B4F2017:sub": "system:serviceaccount:default:aws-load-balancer-controller"
+        }
+      }
+    }
+  ]
+}

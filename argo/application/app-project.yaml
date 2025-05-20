@@ -1,0 +1,15 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: coffeeshop
+  namespace: "default"
+spec:
+  description: "Coffee Shop Application"
+  sourceRepos:
+    - git@bitbucket.org:trainee_devops_intern/trainee-project.git
+  destinations:
+    - namespace: default
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'

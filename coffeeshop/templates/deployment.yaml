@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Values.namespace.name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: {{ .Release.Name }}-{{ .Values.services.name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.services.port }}
+          envFrom:
+            {{- if .Values.services.secretName }}
+            - secretRef:
+                name: {{ .Values.services.secretName }}
+            {{- end }}
+            - configMapRef:
+                name: {{ .Release.Name }}-config
+          resources:
+            limits:
+              cpu: {{ .Values.resources.limits.cpu | default "500m" | quote }}
+              memory: {{ .Values.resources.limits.memory | default "256Mi" | quote }}
+            requests:
+              cpu: {{ .Values.resources.requests.cpu | default "100m" | quote }}
+              memory: {{ .Values.resources.requests.memory | default "128Mi" | quote }}
+          {{- with .Values.services.livenessProbe }}
+          livenessProbe:
+            httpGet:
+              path: {{ .path | default "/health" }}
+              port: {{ $.Values.services.port }}
+            initialDelaySeconds: {{ .initialDelaySeconds | default 10 }}
+            periodSeconds: {{ .periodSeconds | default 15 }}
+            timeoutSeconds: {{ .timeoutSeconds | default 3 }}
+            failureThreshold: {{ .failureThreshold | default 3 }}
+          {{- end }}
+          {{- with .Values.services.readinessProbe }}
+          readinessProbe:
+            httpGet:
+              path: {{ .path | default "/health" }}
+              port: {{ $.Values.services.port }}
+            initialDelaySeconds: {{ .initialDelaySeconds | default 5 }}
+            periodSeconds: {{ .periodSeconds | default 10 }}
+            timeoutSeconds: {{ .timeoutSeconds | default 2 }}
+            failureThreshold: {{ .failureThreshold | default 3 }}
+          {{- end }}
+      restartPolicy: Always
+

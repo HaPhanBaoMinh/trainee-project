@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cloudwatch-metrics
+  namespace: default
+spec:
+  project: default
+  sources:
+    - repoURL: https://aws.github.io/eks-charts
+      chart: aws-cloudwatch-metrics
+      targetRevision: 0.0.11
+      helm:
+        values: |
+          clusterName: opwat-trainee-project-cluster
+          serviceAccount:
+            create: true
+            name: aws-cloudwatch-metrics
+            annotations:
+              eks.amazonaws.com/role-arn: arn:aws:iam::026090549419:role/CloudwatchAgentRole
+         
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

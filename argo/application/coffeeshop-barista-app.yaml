@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: coffeeshop-barista
+  namespace: default
+  annotations:
+    argocd-image-updater.argoproj.io/image-list: "barista=026090549419.dkr.ecr.ap-southeast-1.amazonaws.com/barista"
+    argocd-image-updater.argoproj.io/barista.helm.image-tag: image.tag
+    argocd-image-updater.argoproj.io/barista.helm.image-name: image.repository
+    argocd-image-updater.argoproj.io/barista.update-strategy: semver
+    argocd-image-updater.argoproj.io/pull-policy: Always
+    argocd-image-updater.argoproj.io/write-back-method: argocd
+    argocd-image-updater.argoproj.io/barista.force-update: "true"
+
+spec:
+  project: coffeeshop
+  source:
+    repoURL: git@bitbucket.org:trainee_devops_intern/trainee-project.git
+    targetRevision: HEAD
+    path: coffeeshop
+    helm:
+      valueFiles:
+        - values/barista/values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 3
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 1m

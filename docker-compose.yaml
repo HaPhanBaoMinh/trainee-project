@@ -1,0 +1,133 @@
+version: "2.4"
+
+services:
+  postgres:
+    image: postgres:14-alpine
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=P@ssw0rd
+    healthcheck:
+      test: ["CMD", "pg_isready"]
+    ports:
+      - "5432:5432"
+    networks:
+      - coffeeshop-network
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  rabbitmq:
+    image: rabbitmq:3.11-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - coffeeshop-network
+
+  proxy:
+    image: 026090549419.dkr.ecr.ap-southeast-1.amazonaws.com/proxy:1.0.0
+    environment:
+      APP_NAME: 'proxy-service in docker'
+      GRPC_PRODUCT_HOST: 'product'
+      GRPC_PRODUCT_PORT: 5001
+      GRPC_COUNTER_HOST: 'counter'
+      GRPC_COUNTER_PORT: 5002
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/v1/api/item-types"]
+      interval: 10s
+      timeout: 10s
+      retries: 2
+    ports:
+      - 5000:5000
+    depends_on:
+      - product
+      - counter
+    networks:
+      - coffeeshop-network
+
+  product:
+    image: baominh/go-coffeeshop-product
+    environment:
+      APP_NAME: 'product-service in docker'
+    ports:
+      - 5001:5001
+    networks:
+      - coffeeshop-network
+
+  counter:
+    image: 026090549419.dkr.ecr.ap-southeast-1.amazonaws.com/counter:1.0.0
+    environment:
+      APP_NAME: 'counter-service in docker'
+      IN_DOCKER: "true"
+      PG_URL: postgres://postgres:P@ssw0rd@postgres:5432/postgres
+      PG_DSN_URL: host=postgres user=postgres password=P@ssw0rd dbname=postgres sslmode=disable
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      PRODUCT_CLIENT_URL: product:5001
+    ports:
+      - 5002:5002
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - coffeeshop-network
+
+  barista:
+    image: 026090549419.dkr.ecr.ap-southeast-1.amazonaws.com/barista:1.0.0
+    environment:
+      APP_NAME: 'barista-service in docker'
+      IN_DOCKER: "true"
+      PG_URL: postgres://postgres:P@ssw0rd@postgres:5432/postgres
+      PG_DSN_URL: host=postgres user=postgres password=P@ssw0rd dbname=postgres sslmode=disable
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - coffeeshop-network
+
+  kitchen:
+    image: 026090549419.dkr.ecr.ap-southeast-1.amazonaws.com/kitchen:1.0.0
+    environment:
+      APP_NAME: 'kitchen-service in docker'
+      IN_DOCKER: "true"
+      PG_URL: postgres://postgres:P@ssw0rd@postgres:5432/postgres
+      PG_DSN_URL: host=postgres user=postgres password=P@ssw0rd dbname=postgres sslmode=disable
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - coffeeshop-network
+
+  web:
+    image: 026090549419.dkr.ecr.ap-southeast-1.amazonaws.com/web:1.0.0
+    environment:
+      REVERSE_PROXY_URL: http://localhost:5000
+      WEB_PORT: 8888
+    ports:
+      - 8888:8888
+    depends_on:
+      - proxy
+    networks:
+      - coffeeshop-network
+
+networks:
+  coffeeshop-network:
+
+volumes:
+    pgdata:
+

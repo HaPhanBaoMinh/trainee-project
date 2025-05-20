@@ -1,0 +1,45 @@
+image:
+  tag: 1.0.0
+  pullPolicy: IfNotPresent
+  repository: 026090549419.dkr.ecr.ap-southeast-1.amazonaws.com/counter
+
+project:
+  name: "coffeeshop"
+  description: "Coffee Shop Application"
+  sourceRepos:
+    - "git@bitbucket.org:trainee_devops_intern/trainee-project.git"
+  destinations:
+    namespace: "default"
+    server: "https://kubernetes.default.svc"
+
+namespace:
+  name: "default"
+
+services:
+  name: counter
+  secretName: app-connection-secret
+
+  port: 5002
+  targetPort: 5002
+  env:
+    - name: APP_NAME
+      value: "counter-service in docker"
+    - name: IN_DOCKER
+      value: "true"
+    - name: PRODUCT_CLIENT_URL
+      value: "coffeeshop-product.default.svc.cluster.local:5001"
+
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+hpa:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 2
+  targetCPUUtilizationPercentage: 70

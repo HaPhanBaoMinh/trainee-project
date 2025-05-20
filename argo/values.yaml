@@ -1,0 +1,83 @@
+global:
+  domain: argocd.baominh.click
+
+configs:
+  cm:
+    create: true
+    kustomize.buildOptions: "--enable-alpha-plugins"
+    configManagementPlugins: |
+      - name: kustomize-build-with-helm
+      generate:
+        command: [ "sh", "-c" ]
+        args: [ "kustomize build --enable-helm" ]
+  params:
+    server.insecure: true
+
+repoServer:
+  name: repo-server
+  env:
+  - name: XDG_CONFIG_HOME
+    value: /.config
+
+  - name: AWS_DEFAULT_REGION
+    value: ap-southeast-1
+
+  - name: GNUPGHOME
+    value: /home/argocd/.gnupg
+
+  - name: AWS_ACCESS_KEY_ID
+    valueFrom:
+      secretKeyRef:
+        name: argocd-aws-credentials
+        key: accesskey
+
+  - name: AWS_SECRET_ACCESS_KEY
+    valueFrom:
+      secretKeyRef:
+        name: argocd-aws-credentials
+        key: secretkey
+
+  volumeMounts:
+    - mountPath: /usr/local/bin/kustomize
+      name: custom-tools
+      subPath: kustomize
+    - mountPath: /.config/kustomize/plugin/viaduct.ai/v1/ksops/ksops
+      name: custom-tools
+      subPath: ksops
+
+  volumes:
+    - name: custom-tools
+      emptyDir: {}
+  
+  initContainers:
+    - name: install-ksops
+      image: viaductoss/ksops:v4.2.1
+      command: ["/bin/sh", "-c"]
+      args:
+        - echo "Installing KSOPS...";
+              mv ksops /custom-tools/;
+              mv kustomize /custom-tools/;
+              echo "Done.";
+      volumeMounts:
+        - mountPath: /custom-tools
+          name: custom-tools
+   
+server:
+  ingress:
+    enabled: true
+    controller: aws
+    ingressClassName: alb
+    annotations:
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      alb.ingress.kubernetes.io/target-type: ip
+      alb.ingress.kubernetes.io/backend-protocol: HTTP
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}, {"HTTPS":443}]'
+      alb.ingress.kubernetes.io/ssl-redirect: '443'
+      alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-southeast-1:026090549419:certificate/fde74b1c-ca57-4137-8850-b6c0aa03e92b
+      external-dns.alpha.kubernetes.io/hostname: argocd.baominh.click
+    aws:
+      serviceType: ClusterIP # <- Used with target-type: ip
+      backendProtocolVersion: GRPC
+
+
+    

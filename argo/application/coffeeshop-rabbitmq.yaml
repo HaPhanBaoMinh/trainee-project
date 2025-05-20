@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: coffeeshop-rabbitmq
+  namespace: default
+  annotations:
+    argocd-image-updater.argoproj.io/image-list: "rabbitmq=026090549419.dkr.ecr.ap-southeast-1.amazonaws.com/rabbitmq"
+    argocd-image-updater.argoproj.io/rabbitmq.helm.image-tag: image.tag
+    argocd-image-updater.argoproj.io/rabbitmq.helm.image-name: image.repository
+    argocd-image-updater.argoproj.io/rabbitmq.update-strategy: semver
+    argocd-image-updater.argoproj.io/pull-policy: Always
+    argocd-image-updater.argoproj.io/write-back-method: argocd
+    argocd-image-updater.argoproj.io/rabbitmq.force-update: "true"
+
+spec:
+  project: coffeeshop
+  source:
+    repoURL: git@bitbucket.org:trainee_devops_intern/trainee-project.git
+    targetRevision: HEAD
+    path: coffeeshop
+    helm:
+      valueFiles:
+        - values/rabbitmq/values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 3
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 1m
+

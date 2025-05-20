@@ -1,0 +1,55 @@
+image:
+  tag: 1.0.0
+  pullPolicy: IfNotPresent
+  repository: 026090549419.dkr.ecr.ap-southeast-1.amazonaws.com/kitchen
+
+project:
+  name: "coffeeshop"
+  description: "Coffee Shop Application"
+  sourceRepos:
+    - "git@bitbucket.org:trainee_devops_intern/trainee-project.git"
+  destinations:
+    namespace: "default"
+    server: "https://kubernetes.default.svc"
+
+namespace:
+  name: "default"
+
+services:
+  name: kitchen
+  repoURL: git@bitbucket.org:trainee_devops_intern/trainee-project.git
+  targetRevision: main
+  prune: true
+  selfHeal: true
+  path: coffeeshop
+  secretName: app-connection-secret
+
+  port: 80
+  targetPort: 80
+  ingress:
+    enabled: false
+  env:
+    - name: APP_NAME
+      value: "kitchen-service in docker"
+    - name: IN_DOCKER
+      value: "true"
+  retry:
+    limit: "3"
+    backoff:
+      duration: 5s
+      factor: "2"
+      maxDuration: "1m"
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+hpa:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 2
+  targetCPUUtilizationPercentage: 70
